@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>社區健身房簽到系統</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center p-4">
+
+  <div class="bg-white p-6 rounded-2xl shadow-lg w-full max-w-md">
+    <h1 class="text-2xl font-bold text-center text-blue-600 mb-6">🏋️ 社區健身房系統</h1>
+    
+    <div id="step-name" class="hidden">
+      <p class="text-gray-600 mb-4 text-center">歡迎初次使用！請輸入您的真實姓名：</p>
+      <input type="text" id="username" class="w-full p-3 border rounded-xl mb-4 text-center text-lg" placeholder="請輸入姓名">
+      <button onclick="saveName()" class="w-full bg-blue-500 text-white p-3 rounded-xl font-bold text-lg hover:bg-blue-600">確認送出</button>
+    </div>
+
+    <div id="step-action" class="hidden text-center">
+      <p class="text-xl mb-4 text-gray-700">哈囉，<span id="display-name" class="font-bold text-blue-500"></span>！</p>
+      <div class="grid grid-cols-2 gap-4">
+        <button onclick="handleAction('簽到')" class="bg-green-500 text-white p-6 rounded-2xl font-bold text-xl shadow hover:bg-green-600">🟩 簽到</button>
+        <button onclick="handleAction('簽退')" class="bg-red-500 text-white p-6 rounded-2xl font-bold text-xl shadow hover:bg-red-600">🟥 簽退</button>
+      </div>
+    </div>
+
+    <div id="step-device" class="hidden">
+      <h2 class="text-xl font-bold text-red-500 mb-4 text-center">⚠️ 您是本次時段預約者</h2>
+      <p class="text-gray-600 mb-4 text-center">離開前請確認已關閉以下設備：</p>
+      <div class="space-y-3 mb-6 bg-red-50 p-4 rounded-xl">
+        <label class="flex items-center space-x-3 text-lg text-gray-700">
+          <input type="checkbox" id="chk-device" class="w-5 h-5 rounded text-red-500">
+          <span>冷氣、除濕機、電燈已關閉</span>
+        </label>
+      </div>
+      <button onclick="submitDeviceCheck()" class="w-full bg-red-500 text-white p-3 rounded-xl font-bold text-lg hover:bg-red-600">確認簽退並離開</button>
+    </div>
+
+    <div id="msg" class="mt-4 text-center font-bold text-lg text-gray-500"></div>
+  </div>
+
+  <script>
+    // =================【請在這裡貼上你剛才複製的 GAS Web App URL】=================
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbwTG5zmyBM1Zsiy78YnxXEATjApqRs-Z4xyZHJ4w58LHHRjGAC4dwyP5PAtGb1b-CgSBg/exec";
+    // ===========================================================================
+
+    window.onload = function() {
+      var savedName = localStorage.getItem('gym_username');
+      if (!savedName) {
+        document.getElementById('step-name').classList.remove('hidden');
+      } else {
+        showActionPage(savedName);
+      }
+    };
+
+    function saveName() {
+      var name = document.getElementById('username').value.trim();
+      if (!name) { alert('請輸入名字！'); return; }
+      localStorage.setItem('gym_username', name);
+      showActionPage(name);
+    }
+
+    function showActionPage(name) {
+      document.getElementById('step-name').classList.add('hidden');
+      document.getElementById('step-action').classList.remove('hidden');
+      document.getElementById('display-name').innerText = name;
+    }
+
+    function handleAction(action) {
+      var name = localStorage.getItem('gym_username');
+      showLoading("處理中...");
+
+      // 改用標準 fetch POST 送到 GAS API
+      fetch(GAS_URL, {
+        method: "POST",
+        body: JSON.stringify({ name: name, action: action })
+      })
+      .then(res => res.json())
+      .then(response => {
+        if (action === '簽到') {
+          showSuccess("🎉 簽到成功！祝您運動愉快！");
+        } else {
+          if (response.isPrimaryUser === "是") {
+            hideLoading();
+            document.getElementById('step-action').classList.add('hidden');
+            document.getElementById('step-device').classList.remove('hidden');
+          } else {
+            showSuccess("👋 簽退成功！一路上小心！");
+          }
+        }
+      })
+      .catch(err => showSuccess("連線失敗，請重試。"));
+    }
+
+    function submitDeviceCheck() {
+      var name = localStorage.getItem('gym_username');
+      var isChecked = document.getElementById('chk-device').checked;
+      
+      if (!isChecked) { alert('請勾選確認！'); return; }
+
+      showLoading("正在記錄設備狀態...");
+      
+      fetch(GAS_URL, {
+        method: "POST",
+        body: JSON.stringify({ name: name, action: '簽退', deviceCheck: "已確認關閉冷氣除濕機電燈" })
+      })
+      .then(res => res.json())
+      .then(() => {
+        showSuccess("👋 設備已確認，簽退成功！感謝維持社區環境！");
+      })
+      .catch(err => showSuccess("連線失敗，請重試。"));
+    }
+
+    function showLoading(txt) {
+      document.getElementById('msg').innerText = txt;
+      document.getElementById('msg').className = "mt-4 text-center font-bold text-lg text-amber-500";
+    }
+    function hideLoading() { document.getElementById('msg').innerText = ""; }
+    function showSuccess(txt) {
+      document.getElementById('step-action').className = "hidden";
+      document.getElementById('step-device').className = "hidden";
+      document.getElementById('msg').innerText = txt;
+      document.getElementById('msg').className = "mt-4 text-center font-bold text-xl text-green-600";
+    }
+  </script>
+</body>
+</html>
