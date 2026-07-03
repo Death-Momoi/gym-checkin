@@ -27,10 +27,18 @@
     <div id="step-device" class="hidden">
       <h2 class="text-xl font-bold text-red-500 mb-4 text-center">⚠️ 您是本次時段預約者</h2>
       <p class="text-gray-600 mb-4 text-center">離開前請確認已關閉以下設備：</p>
-      <div class="space-y-3 mb-6 bg-red-50 p-4 rounded-xl">
-        <label class="flex items-center space-x-3 text-lg text-gray-700">
-          <input type="checkbox" id="chk-device" class="w-5 h-5 rounded text-red-500">
-          <span>冷氣、除濕機、電燈已關閉</span>
+      <div class="space-y-3 mb-6 bg-red-50 p-4 rounded-xl text-left">
+        <label class="flex items-center space-x-3 text-lg text-gray-700 p-1 hover:bg-red-100 rounded cursor-pointer">
+          <input type="checkbox" id="chk-ac" class="w-5 h-5 rounded text-red-500">
+          <span>❄️ 冷氣已關閉</span>
+        </label>
+        <label class="flex items-center space-x-3 text-lg text-gray-700 p-1 hover:bg-red-100 rounded cursor-pointer">
+          <input type="checkbox" id="chk-dehumidifier" class="w-5 h-5 rounded text-red-500">
+          <span>💧 除濕機已關閉</span>
+        </label>
+        <label class="flex items-center space-x-3 text-lg text-gray-700 p-1 hover:bg-red-100 rounded cursor-pointer">
+          <input type="checkbox" id="chk-light" class="w-5 h-5 rounded text-red-500">
+          <span>💡 電燈已關閉</span>
         </label>
       </div>
       <button onclick="submitDeviceCheck()" class="w-full bg-red-500 text-white p-3 rounded-xl font-bold text-lg hover:bg-red-600">確認簽退並離開</button>
@@ -94,15 +102,27 @@
 
     function submitDeviceCheck() {
       var name = localStorage.getItem('gym_username');
-      var isChecked = document.getElementById('chk-device').checked;
       
-      if (!isChecked) { alert('請勾選確認！'); return; }
+      // 抓取三個核取方塊的状态
+      var isAcChecked = document.getElementById('chk-ac').checked;
+      var isDehumidifierChecked = document.getElementById('chk-dehumidifier').checked;
+      var isLightChecked = document.getElementById('chk-light').checked;
+      
+      // 驗證是否全部打勾
+      if (!isAcChecked || !isDehumidifierChecked || !isLightChecked) {
+        alert('請確實逐項檢查，並勾選確認「冷氣」、「除濕機」與「電燈」皆已關閉！');
+        return;
+      }
 
       showLoading("正在記錄設備狀態...");
       
       fetch(GAS_URL, {
         method: "POST",
-        body: JSON.stringify({ name: name, action: '簽退', deviceCheck: "已確認關閉冷氣除濕機電燈" })
+        body: JSON.stringify({ 
+          name: name, 
+          action: '簽退', 
+          deviceCheck: "已確認關閉冷氣、除濕機、電燈" 
+        })
       })
       .then(res => res.json())
       .then(() => {
