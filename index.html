@@ -104,31 +104,39 @@
       var name = localStorage.getItem('gym_username');
       var currentStatus = localStorage.getItem('gym_status') || 'checked_out';
 
-      // 雙重防呆：阻擋不合理的點擊
       if (action === '簽到' && currentStatus === 'checked_in') return;
       if (action === '簽退' && currentStatus === 'checked_out') return;
 
       showLoading("處理中...");
 
+      // 如果是簽退，先帶上 checkOnly: true 詢問後端身份，先不寫入
+      var requestBody = { name: name, action: action };
+      if (action === '簽退') {
+        requestBody.checkOnly = true;
+      }
+
       fetch(GAS_URL, {
         method: "POST",
-        body: JSON.stringify({ name: name, action: action })
+        body: JSON.stringify(requestBody)
       })
       .then(res => res.json())
       .then(response => {
         if (action === '簽到') {
-          // 簽到成功，變更狀態為已簽到
           localStorage.setItem('gym_status', 'checked_in');
           showSuccess("🎉 簽到成功！祝您運動愉快！");
+          updateButtonUI();
         } else {
+          // 簽退情境
           if (response.isPrimaryUser === "是") {
+            // 如果是預約者，後端剛才沒有寫入試算表，交給打勾面板引導
             hideLoading();
             document.getElementById('step-action').classList.add('hidden');
             document.getElementById('step-device').classList.remove('hidden');
           } else {
-            // 共用者簽退成功，變更狀態為已簽退
+            // 如果不是預約者，後端剛才已經直接寫入流水帳了，直接宣告成功
             localStorage.setItem('gym_status', 'checked_out');
             showSuccess("👋 簽退成功！一路上小心！");
+            updateButtonUI();
           }
         }
       })
