@@ -103,12 +103,10 @@
     function submitDeviceCheck() {
       var name = localStorage.getItem('gym_username');
       
-      // 抓取三個核取方塊的状态
       var isAcChecked = document.getElementById('chk-ac').checked;
       var isDehumidifierChecked = document.getElementById('chk-dehumidifier').checked;
       var isLightChecked = document.getElementById('chk-light').checked;
       
-      // 驗證是否全部打勾
       if (!isAcChecked || !isDehumidifierChecked || !isLightChecked) {
         alert('請確實逐項檢查，並勾選確認「冷氣」、「除濕機」與「電燈」皆已關閉！');
         return;
@@ -116,12 +114,15 @@
 
       showLoading("正在記錄設備狀態...");
       
+      // 將三個核取方塊的結果分開包進 JSON 傳送
       fetch(GAS_URL, {
         method: "POST",
         body: JSON.stringify({ 
           name: name, 
           action: '簽退', 
-          deviceCheck: "已確認關閉冷氣、除濕機、電燈" 
+          acCheck: "已關閉",
+          dehumidifierCheck: "已關閉",
+          lightCheck: "已關閉"
         })
       })
       .then(res => res.json())
