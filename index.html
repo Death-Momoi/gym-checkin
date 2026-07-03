@@ -19,9 +19,10 @@
     <div id="step-action" class="hidden text-center">
       <p class="text-xl mb-4 text-gray-700">哈囉，<span id="display-name" class="font-bold text-blue-500"></span>！</p>
       <div class="grid grid-cols-2 gap-4">
-        <button onclick="handleAction('簽到')" class="bg-green-500 text-white p-6 rounded-2xl font-bold text-xl shadow hover:bg-green-600">🟩 簽到</button>
-        <button onclick="handleAction('簽退')" class="bg-red-500 text-white p-6 rounded-2xl font-bold text-xl shadow hover:bg-red-600">🟥 簽退</button>
+        <button id="btn-checkin" onclick="handleAction('簽到')" class="bg-green-500 text-white p-6 rounded-2xl font-bold text-xl shadow hover:bg-green-600 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed">🟩 簽到</button>
+        <button id="btn-checkout" onclick="handleAction('簽退')" class="bg-red-500 text-white p-6 rounded-2xl font-bold text-xl shadow hover:bg-red-600 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed">🟥 簽退</button>
       </div>
+      <p id="status-hint" class="text-sm text-gray-400 mt-4"></p>
     </div>
 
     <div id="step-device" class="hidden">
@@ -48,8 +49,8 @@
   </div>
 
   <script>
-    // =================【請在這裡貼上你剛才複製的 GAS Web App URL】=================
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbwTG5zmyBM1Zsiy78YnxXEATjApqRs-Z4xyZHJ4w58LHHRjGAC4dwyP5PAtGb1b-CgSBg/exec";
+    // =================【請記得貼上你的 GAS Web App URL】=================
+    const GAS_URL = "請把你的GAS網址貼在這裡";
     // ===========================================================================
 
     window.onload = function() {
@@ -65,6 +66,8 @@
       var name = document.getElementById('username').value.trim();
       if (!name) { alert('請輸入名字！'); return; }
       localStorage.setItem('gym_username', name);
+      // 初次使用，預設狀態為「已簽退/未簽到」
+      localStorage.setItem('gym_status', 'checked_out'); 
       showActionPage(name);
     }
 
@@ -72,13 +75,41 @@
       document.getElementById('step-name').classList.add('hidden');
       document.getElementById('step-action').classList.remove('hidden');
       document.getElementById('display-name').innerText = name;
+      
+      // 更新按鈕的可點擊狀態
+      updateButtonUI();
+    }
+
+    // 核心控制：根據目前狀態控制按鈕開關
+    function updateButtonUI() {
+      var currentStatus = localStorage.getItem('gym_status') || 'checked_out';
+      var btnCheckin = document.getElementById('btn-checkin');
+      var btnCheckout = document.getElementById('btn-checkout');
+      var hint = document.getElementById('status-hint');
+
+      if (currentStatus === 'checked_in') {
+        // 已簽到狀態 -> 只能簽退
+        btnCheckin.disabled = true;
+        btnCheckout.disabled = false;
+        hint.innerText = "目前狀態：已在健身房中 🏋️";
+      } else {
+        // 未簽到/已簽退狀態 -> 只能簽到
+        btnCheckin.disabled = false;
+        btnCheckout.disabled = true;
+        hint.innerText = "目前狀態：尚未簽到 🏠";
+      }
     }
 
     function handleAction(action) {
       var name = localStorage.getItem('gym_username');
-      showLoading("處理中....");
+      var currentStatus = localStorage.getItem('gym_status') || 'checked_out';
 
-      // 改用標準 fetch POST 送到 GAS API
+      // 雙重防呆：阻擋不合理的點擊
+      if (action === '簽到' && currentStatus === 'checked_in') return;
+      if (action === '簽退' && currentStatus === 'checked_out') return;
+
+      showLoading("處理中...");
+
       fetch(GAS_URL, {
         method: "POST",
         body: JSON.stringify({ name: name, action: action })
@@ -86,6 +117,8 @@
       .then(res => res.json())
       .then(response => {
         if (action === '簽到') {
+          // 簽到成功，變更狀態為已簽到
+          localStorage.setItem('gym_status', 'checked_in');
           showSuccess("🎉 簽到成功！祝您運動愉快！");
         } else {
           if (response.isPrimaryUser === "是") {
@@ -93,6 +126,8 @@
             document.getElementById('step-action').classList.add('hidden');
             document.getElementById('step-device').classList.remove('hidden');
           } else {
+            // 共用者簽退成功，變更狀態為已簽退
+            localStorage.setItem('gym_status', 'checked_out');
             showSuccess("👋 簽退成功！一路上小心！");
           }
         }
@@ -114,7 +149,6 @@
 
       showLoading("正在記錄設備狀態...");
       
-      // 將三個核取方塊的結果分開包進 JSON 傳送
       fetch(GAS_URL, {
         method: "POST",
         body: JSON.stringify({ 
@@ -127,6 +161,8 @@
       })
       .then(res => res.json())
       .then(() => {
+        // 預約者確認關閉設備後，變更狀態為已簽退
+        localStorage.setItem('gym_status', 'checked_out');
         showSuccess("👋 設備已確認，簽退成功！感謝維持社區環境！");
       })
       .catch(err => showSuccess("連線失敗，請重試。"));
