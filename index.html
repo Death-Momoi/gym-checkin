@@ -2,50 +2,84 @@
 <html>
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>社區健身房簽到系統</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center p-4">
 
-  <div class="bg-white p-6 rounded-2xl shadow-lg w-full max-w-md">
-    <h1 class="text-2xl font-bold text-center text-blue-600 mb-6">🏋️ 社區健身房系統</h1>
+  <a id="btn-timeline" href="https://script.google.com/macros/s/AKfycbwTG5zmyBM1Zsiy78YnxXEATjApqRs-Z4xyZHJ4w58LHHRjGAC4dwyP5PAtGb1b-CgSBg/exec" target="_blank" class="hidden absolute top-4 left-4 flex items-center gap-1 bg-white px-3 py-2 rounded-full shadow text-blue-600 font-bold text-sm">
+    <span class="material-icons text-lg">timeline</span> 時間軸
+  </a>
+
+  <div class="bg-white p-6 rounded-3xl shadow-xl w-full max-w-sm relative">
     
-    <div id="step-name" class="hidden">
-      <p class="text-gray-600 mb-4 text-center">歡迎初次使用！請輸入您的真實姓名：</p>
-      <input type="text" id="username" class="w-full p-3 border rounded-xl mb-4 text-center text-lg" placeholder="請輸入姓名">
-      <button onclick="saveName()" class="w-full bg-blue-500 text-white p-3 rounded-xl font-bold text-lg hover:bg-blue-600">確認送出</button>
+    <div id="step-bind" class="hidden">
+      <h1 class="text-2xl font-bold text-center text-blue-600 mb-2">🔗 帳號綁定</h1>
+      <p class="text-gray-500 mb-6 text-center text-sm">初次使用，請綁定您的 Google 帳號與姓名</p>
+      
+      <div class="space-y-4">
+        <div>
+          <label class="block text-gray-700 text-sm font-bold mb-1">Google 帳號 (Email)</label>
+          <input type="email" id="input-email" class="w-full p-3 border rounded-xl" placeholder="example@gmail.com">
+        </div>
+        <div>
+          <label class="block text-gray-700 text-sm font-bold mb-1">真實姓名</label>
+          <input type="text" id="input-name" class="w-full p-3 border rounded-xl" placeholder="請輸入姓名">
+        </div>
+        <button onclick="bindAccount()" class="w-full bg-blue-500 text-white p-3 rounded-xl font-bold text-lg hover:bg-blue-600 transition">完成綁定</button>
+      </div>
     </div>
 
-    <div id="step-action" class="hidden text-center">
-      <p class="text-xl mb-4 text-gray-700">哈囉，<span id="display-name" class="font-bold text-blue-500"></span>！</p>
-      <div class="grid grid-cols-2 gap-4">
-        <button id="btn-checkin" onclick="handleAction('簽到')" class="bg-green-500 text-white p-6 rounded-2xl font-bold text-xl shadow hover:bg-green-600 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed">🟩 簽到</button>
-        <button id="btn-checkout" onclick="handleAction('簽退')" class="bg-red-500 text-white p-6 rounded-2xl font-bold text-xl shadow hover:bg-red-600 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed">🟥 簽退</button>
+    <div id="step-main" class="hidden flex flex-col items-center">
+      <p class="text-lg text-gray-600 mb-6">哈囉，<span id="display-name" class="font-bold text-blue-500"></span></p>
+      
+      <button id="btn-bubble" onclick="handleBubbleClick()" class="w-48 h-48 rounded-full shadow-lg text-white font-bold text-3xl flex items-center justify-center transition-all transform active:scale-95 duration-200">
+        </button>
+
+      <div id="role-selector" class="mt-8 bg-gray-50 p-2 rounded-xl flex gap-2 w-full justify-center">
+        <label class="flex-1 text-center py-2 rounded-lg cursor-pointer transition-colors" id="label-role-main">
+          <input type="radio" name="role" value="主要借用者" class="hidden"> 主要借用者
+        </label>
+        <label class="flex-1 text-center py-2 rounded-lg cursor-pointer transition-colors bg-white shadow-sm border" id="label-role-sub">
+          <input type="radio" name="role" value="共同使用者" class="hidden" checked> 共同使用者
+        </label>
       </div>
-      <p id="status-hint" class="text-sm text-gray-400 mt-4"></p>
     </div>
 
     <div id="step-device" class="hidden">
-      <h2 class="text-xl font-bold text-red-500 mb-4 text-center">⚠️ 您是本次時段預約者</h2>
-      <p class="text-gray-600 mb-4 text-center">離開前請確認已關閉以下設備：</p>
-      <div class="space-y-3 mb-6 bg-red-50 p-4 rounded-xl text-left">
-        <label class="flex items-center space-x-3 text-lg text-gray-700 p-1 hover:bg-red-100 rounded cursor-pointer">
-          <input type="checkbox" id="chk-ac" class="w-5 h-5 rounded text-red-500">
-          <span>❄️ 冷氣已關閉</span>
+      <h2 class="text-xl font-bold text-red-500 mb-4 text-center">⚠️ 簽退前確認</h2>
+      <p class="text-gray-600 mb-4 text-center text-sm">您是主要借用者，請選擇您的操作：</p>
+      
+      <button onclick="submitSignOut('轉移')" class="w-full bg-orange-100 text-orange-600 border border-orange-300 p-3 rounded-xl font-bold text-md hover:bg-orange-200 mb-4 transition">
+        🔄 轉移主要借用者給現場人員<br><span class="text-xs font-normal">（免檢查設備，直接離開）</span>
+      </button>
+
+      <div class="relative flex py-2 items-center">
+        <div class="flex-grow border-t border-gray-300"></div>
+        <span class="flex-shrink-0 mx-4 text-gray-400 text-sm">或由您負責關閉</span>
+        <div class="flex-grow border-t border-gray-300"></div>
+      </div>
+
+      <div class="space-y-3 my-4 bg-gray-50 border p-4 rounded-xl text-left">
+        <label class="flex items-center space-x-3 text-gray-700 p-1 cursor-pointer">
+          <input type="checkbox" id="chk-ac" class="w-5 h-5 rounded text-blue-500">
+          <span>❄️ 冷氣 <b class="text-red-500">已關閉</b></span>
         </label>
-        <label class="flex items-center space-x-3 text-lg text-gray-700 p-1 hover:bg-red-100 rounded cursor-pointer">
-          <input type="checkbox" id="chk-dehumidifier" class="w-5 h-5 rounded text-red-500">
-          <span>💧 除濕機已關閉</span>
+        <label class="flex items-center space-x-3 text-gray-700 p-1 cursor-pointer">
+          <input type="checkbox" id="chk-light" class="w-5 h-5 rounded text-blue-500">
+          <span>💡 電燈 <b class="text-red-500">已關閉</b></span>
         </label>
-        <label class="flex items-center space-x-3 text-lg text-gray-700 p-1 hover:bg-red-100 rounded cursor-pointer">
-          <input type="checkbox" id="chk-light" class="w-5 h-5 rounded text-red-500">
-          <span>💡 電燈已關閉</span>
+        <label class="flex items-center space-x-3 text-gray-700 p-1 cursor-pointer">
+          <input type="checkbox" id="chk-dehumidifier" class="w-5 h-5 rounded text-blue-500">
+          <span>💧 除濕機 <b class="text-green-600">已開啟</b></span>
         </label>
       </div>
-      <button onclick="submitDeviceCheck()" class="w-full bg-red-500 text-white p-3 rounded-xl font-bold text-lg hover:bg-red-600">確認簽退並離開</button>
+      <button onclick="submitSignOut('關閉設備')" class="w-full bg-red-500 text-white p-3 rounded-xl font-bold hover:bg-red-600 transition">確認簽退並離開</button>
     </div>
 
-    <div id="msg" class="mt-4 text-center font-bold text-lg text-gray-500"></div>
+    <div id="msg" class="mt-4 text-center font-bold text-sm text-gray-500"></div>
   </div>
 
   <script>
@@ -53,139 +87,198 @@
     const GAS_URL = "https://script.google.com/macros/s/AKfycbwTG5zmyBM1Zsiy78YnxXEATjApqRs-Z4xyZHJ4w58LHHRjGAC4dwyP5PAtGb1b-CgSBg/exec";
     // ===========================================================================
 
+    // 身分選擇器 UI 互動邏輯
+    const radios = document.querySelectorAll('input[name="role"]');
+    const labelMain = document.getElementById('label-role-main');
+    const labelSub = document.getElementById('label-role-sub');
+
+    radios.forEach(radio => {
+      radio.addEventListener('change', function() {
+        if(this.value === '主要借用者') {
+          labelMain.classList.add('bg-white', 'shadow-sm', 'border', 'text-blue-600', 'font-bold');
+          labelSub.classList.remove('bg-white', 'shadow-sm', 'border', 'text-blue-600', 'font-bold');
+        } else {
+          labelSub.classList.add('bg-white', 'shadow-sm', 'border', 'text-blue-600', 'font-bold');
+          labelMain.classList.remove('bg-white', 'shadow-sm', 'border', 'text-blue-600', 'font-bold');
+        }
+      });
+    });
+
     window.onload = function() {
+      var savedEmail = localStorage.getItem('gym_email');
       var savedName = localStorage.getItem('gym_username');
-      if (!savedName) {
-        document.getElementById('step-name').classList.remove('hidden');
+      
+      if (!savedEmail || !savedName) {
+        document.getElementById('step-bind').classList.remove('hidden');
       } else {
-        showActionPage(savedName);
+        document.getElementById('btn-timeline').classList.remove('hidden');
+        showMainPage(savedName);
       }
     };
 
-    function saveName() {
-      var name = document.getElementById('username').value.trim();
-      if (!name) { alert('請輸入名字！'); return; }
-      localStorage.setItem('gym_username', name);
-      // 初次使用，預設狀態為「已簽退/未簽到」
-      localStorage.setItem('gym_status', 'checked_out'); 
-      showActionPage(name);
-    }
-
-    function showActionPage(name) {
-      document.getElementById('step-name').classList.add('hidden');
-      document.getElementById('step-action').classList.remove('hidden');
-      document.getElementById('display-name').innerText = name;
+    function bindAccount() {
+      var email = document.getElementById('input-email').value.trim();
+      var name = document.getElementById('input-name').value.trim();
       
-      // 更新按鈕的可點擊狀態
-      updateButtonUI();
+      if (!email || !name) { alert('請填寫完整資訊！'); return; }
+      
+      localStorage.setItem('gym_email', email);
+      localStorage.setItem('gym_username', name);
+      localStorage.setItem('gym_status', 'checked_out'); 
+      
+      document.getElementById('btn-timeline').classList.remove('hidden');
+      document.getElementById('step-bind').classList.add('hidden');
+      showMainPage(name);
     }
 
-    // 核心控制：根據目前狀態控制按鈕開關
-    function updateButtonUI() {
-      var currentStatus = localStorage.getItem('gym_status') || 'checked_out';
-      var btnCheckin = document.getElementById('btn-checkin');
-      var btnCheckout = document.getElementById('btn-checkout');
-      var hint = document.getElementById('status-hint');
+    function showMainPage(name) {
+      document.getElementById('step-main').classList.remove('hidden');
+      document.getElementById('display-name').innerText = name;
+      updateBubbleUI();
+    }
 
-      if (currentStatus === 'checked_in') {
-        // 已簽到狀態 -> 只能簽退
-        btnCheckin.disabled = true;
-        btnCheckout.disabled = false;
-        hint.innerText = "目前狀態：已在健身房中 🏋️";
+    // 更新泡泡的狀態與顏色
+    function updateBubbleUI() {
+      var status = localStorage.getItem('gym_status') || 'checked_out';
+      var bubble = document.getElementById('btn-bubble');
+      var roleSelector = document.getElementById('role-selector');
+
+      if (status === 'checked_out') {
+        bubble.innerText = "簽到";
+        bubble.className = "w-48 h-48 rounded-full shadow-lg text-white font-bold text-4xl flex items-center justify-center transition-all transform active:scale-95 duration-200 bg-gradient-to-br from-green-400 to-green-600 shadow-green-500/50";
+        roleSelector.style.opacity = "1";
+        roleSelector.style.pointerEvents = "auto";
       } else {
-        // 未簽到/已簽退狀態 -> 只能簽到
-        btnCheckin.disabled = false;
-        btnCheckout.disabled = true;
-        hint.innerText = "目前狀態：尚未簽到 🏠";
+        bubble.innerText = "簽退";
+        bubble.className = "w-48 h-48 rounded-full shadow-lg text-white font-bold text-4xl flex items-center justify-center transition-all transform active:scale-95 duration-200 bg-gradient-to-br from-red-400 to-red-600 shadow-red-500/50";
+        // 簽到後鎖定身分選擇，避免亂切換
+        roleSelector.style.opacity = "0.5";
+        roleSelector.style.pointerEvents = "none";
       }
     }
 
-    function handleAction(action) {
-      var name = localStorage.getItem('gym_username');
-      var currentStatus = localStorage.getItem('gym_status') || 'checked_out';
-
-      if (action === '簽到' && currentStatus === 'checked_in') return;
-      if (action === '簽退' && currentStatus === 'checked_out') return;
-
-      showLoading("處理中...");
-
-      // 如果是簽退，先帶上 checkOnly: true 詢問後端身份，先不寫入
-      var requestBody = { name: name, action: action };
-      if (action === '簽退') {
-        requestBody.checkOnly = true;
+    // 點擊大泡泡的處理邏輯
+    function handleBubbleClick() {
+      var status = localStorage.getItem('gym_status') || 'checked_out';
+      
+      if (status === 'checked_out') {
+        processCheckIn();
+      } else {
+        processPreCheckOut();
       }
+    }
 
-      fetch(GAS_URL, {
-        method: "POST",
-        body: JSON.stringify(requestBody)
-      })
+    function processCheckIn() {
+      var name = localStorage.getItem('gym_username');
+      var email = localStorage.getItem('gym_email');
+      var role = document.querySelector('input[name="role"]:checked').value;
+      
+      var bubble = document.getElementById('btn-bubble');
+      bubble.innerText = "處理中...";
+
+      var payload = { action: '簽到', name: name, email: email, role: role };
+
+      fetch(GAS_URL, { method: "POST", body: JSON.stringify(payload) })
       .then(res => res.json())
       .then(response => {
-        if (action === '簽到') {
-          localStorage.setItem('gym_status', 'checked_in');
-          showSuccess("🎉 簽到成功！祝您運動愉快！");
-          updateButtonUI();
-        } else {
-          // 簽退情境
-          if (response.isPrimaryUser === "是") {
-            // 如果是預約者，後端剛才沒有寫入試算表，交給打勾面板引導
-            hideLoading();
-            document.getElementById('step-action').classList.add('hidden');
-            document.getElementById('step-device').classList.remove('hidden');
-          } else {
-            // 如果不是預約者，後端剛才已經直接寫入流水帳了，直接宣告成功
-            localStorage.setItem('gym_status', 'checked_out');
-            showSuccess("👋 簽退成功！一路上小心！");
-            updateButtonUI();
-          }
-        }
+        bubble.innerText = "簽到成功";
+        localStorage.setItem('gym_status', 'checked_in');
+        localStorage.setItem('gym_current_role', role); // 記住這次簽到的身分
+        
+        // 等待 1.5 秒後把泡泡變紅改成簽退
+        setTimeout(updateBubbleUI, 1500);
       })
-      .catch(err => showSuccess("連線失敗，請重試。"));
+      .catch(err => {
+        alert("連線失敗，請重試");
+        updateBubbleUI();
+      });
     }
 
-    function submitDeviceCheck() {
-      var name = localStorage.getItem('gym_username');
+    function processPreCheckOut() {
+      var role = localStorage.getItem('gym_current_role');
       
-      var isAcChecked = document.getElementById('chk-ac').checked;
-      var isDehumidifierChecked = document.getElementById('chk-dehumidifier').checked;
-      var isLightChecked = document.getElementById('chk-light').checked;
-      
-      if (!isAcChecked || !isDehumidifierChecked || !isLightChecked) {
-        alert('請確實逐項檢查，並勾選確認「冷氣」、「除濕機」與「電燈」皆已關閉！');
-        return;
+      if (role === '主要借用者') {
+        // 主要借用者，跳轉到檢查/轉交畫面
+        document.getElementById('step-main').classList.add('hidden');
+        document.getElementById('step-device').classList.remove('hidden');
+      } else {
+        // 共同使用者，直接送出簽退
+        var bubble = document.getElementById('btn-bubble');
+        bubble.innerText = "處理中...";
+        
+        var payload = {
+          action: '簽退',
+          name: localStorage.getItem('gym_username'),
+          email: localStorage.getItem('gym_email'),
+          role: '共同使用者'
+        };
+
+        fetch(GAS_URL, { method: "POST", body: JSON.stringify(payload) })
+        .then(() => {
+          bubble.innerText = "簽退成功";
+          localStorage.setItem('gym_status', 'checked_out');
+          setTimeout(updateBubbleUI, 1500);
+        });
+      }
+    }
+
+    function submitSignOut(mode) {
+      var payload = {
+        action: '簽退',
+        name: localStorage.getItem('gym_username'),
+        email: localStorage.getItem('gym_email'),
+        role: '主要借用者'
+      };
+
+      if (mode === '轉移') {
+        payload.acCheck = "已轉交共同借用者";
+        payload.lightCheck = "已轉交共同借用者";
+        payload.dehumidifierCheck = "已轉交共同借用者";
+      } else {
+        var isAcChecked = document.getElementById('chk-ac').checked;
+        var isLightChecked = document.getElementById('chk-light').checked;
+        var isDehChecked = document.getElementById('chk-dehumidifier').checked;
+        
+        if (!isAcChecked || !isLightChecked || !isDehChecked) {
+          alert('請確實逐項檢查：\n1. 冷氣已關閉\n2. 電燈已關閉\n3. 除濕機已開啟');
+          return;
+        }
+        payload.acCheck = "已關閉";
+        payload.lightCheck = "已關閉";
+        payload.dehumidifierCheck = "已開啟"; // 💡 符合除濕機需開啟的邏輯
       }
 
-      showLoading("正在記錄設備狀態....");
+      showLoading("正在記錄狀態....");
       
-      fetch(GAS_URL, {
-        method: "POST",
-        body: JSON.stringify({ 
-          name: name, 
-          action: '簽退', 
-          acCheck: "已關閉",
-          dehumidifierCheck: "已關閉",
-          lightCheck: "已關閉"
-        })
-      })
+      fetch(GAS_URL, { method: "POST", body: JSON.stringify(payload) })
       .then(res => res.json())
       .then(() => {
-        // 預約者確認關閉設備後，變更狀態為已簽退
         localStorage.setItem('gym_status', 'checked_out');
-        showSuccess("👋 設備已確認，簽退成功！感謝維持社區環境！");
-      })
-      .catch(err => showSuccess("連線失敗，請重試。"));
+        showSuccess("👋 簽退成功！感謝您的配合！");
+        
+        // 3秒後自動回到大泡泡主畫面
+        setTimeout(() => {
+          document.getElementById('msg').innerText = "";
+          document.getElementById('step-device').classList.add('hidden');
+          document.getElementById('step-main').classList.remove('hidden');
+          
+          // 恢復核取方塊的預設未勾選狀態
+          document.getElementById('chk-ac').checked = false;
+          document.getElementById('chk-light').checked = false;
+          document.getElementById('chk-dehumidifier').checked = false;
+          
+          updateBubbleUI();
+        }, 3000);
+      });
     }
 
     function showLoading(txt) {
       document.getElementById('msg').innerText = txt;
-      document.getElementById('msg').className = "mt-4 text-center font-bold text-lg text-amber-500";
+      document.getElementById('msg').className = "mt-4 text-center font-bold text-sm text-amber-500";
     }
-    function hideLoading() { document.getElementById('msg').innerText = ""; }
     function showSuccess(txt) {
-      document.getElementById('step-action').className = "hidden";
-      document.getElementById('step-device').className = "hidden";
       document.getElementById('msg').innerText = txt;
-      document.getElementById('msg').className = "mt-4 text-center font-bold text-xl text-green-600";
+      document.getElementById('msg').className = "mt-4 text-center font-bold text-md text-green-600";
     }
   </script>
 </body>
