@@ -188,60 +188,70 @@
       .catch(err => { alert("連線失敗"); updateBubbleUI(); });
     }
 
+    // 🔥【核心大修復版】強制先同步後端，再進行身分檢查分流
     function processPreCheckOut() {
-  var name = localStorage.getItem('gym_username');
-  
-  showLoading("正在驗證身分權限...");
-  
-  // 💡 關鍵改動：簽退前，先發送 POST 去後端查查看自己有沒有被轉移成「主要借用者」
-  fetch(GAS_URL, { 
-    method: "POST", 
-    body: JSON.stringify({ action: "檢查目前身分", name: name }) 
-  })
-  .then(res => res.json())
-  .then(response => {
-    hideLoading();
-    var latestRole = response.role || '共同使用者';
-    localStorage.setItem('gym_current_role', latestRole); // 同步更新本地端的身分記錄
-    
-    if (latestRole === '主要借用者') {
-      // 成功捕捉到「被指定者」的身分轉移！強制進入檢查與轉移畫面
-      showLoading("正在獲取現場人員名單...");
-      fetch(GAS_URL, { method: "POST", body: JSON.stringify({ action: "取得在場名單", excludeName: name }) })
+      var name = localStorage.getItem('gym_username');
+      var bubble = document.getElementById('btn-bubble');
+      bubble.innerText = "驗證中...";
+      showLoading("正在驗證身份與交接狀態...");
+      
+      // 1. 強制第一步：先去後端拿最新的身份
+      fetch(GAS_URL, { 
+        method: "POST", 
+        body: JSON.stringify({ action: "檢查目前身分", name: name }) 
+      })
       .then(res => res.json())
       .then(response => {
-        hideLoading();
-        var select = document.getElementById('select-next-user');
-        select.innerHTML = '<option value="">-- 請選擇接替的現場人員 --</option>'; 
+        var latestRole = response.role || '共同使用者';
+        localStorage.setItem('gym_current_role', latestRole); // 同步更新至本機緩存
         
-        if (response.users && response.users.length > 0) {
-          response.users.forEach(function(username) {
-            var opt = document.createElement('option');
-            opt.value = username;
-            opt.innerText = username;
-            select.appendChild(opt);
+        // 2. 如果最新身分是主要借用者，阻斷並跳轉到檢查畫面
+        if (latestRole === '主要借用者') {
+          showLoading("正在撈取現場其他人員名單...");
+          
+          fetch(GAS_URL, { method: "POST", body: JSON.stringify({ action: "取得在場名單", excludeName: name }) })
+          .then(res => res.json())
+          .then(resList => {
+            hideLoading();
+            bubble.innerText = "簽退";
+            
+            var select = document.getElementById('select-next-user');
+            select.innerHTML = '<option value="">-- 請選擇接替的現場人員 --</option>'; 
+            
+            if (resList.users && resList.users.length > 0) {
+              resList.users.forEach(function(username) {
+                var opt = document.createElement('option');
+                opt.value = username;
+                opt.innerText = username;
+                select.appendChild(opt);
+              });
+            }
+            
+            // 隱藏大泡泡畫面，強制彈出設備清單
+            document.getElementById('step-main').classList.add('hidden');
+            document.getElementById('step-device').classList.remove('hidden');
+          });
+          
+        } else {
+          // 3. 依然是一般共同借用者，直接走正常簽退
+          hideLoading();
+          bubble.innerText = "處理中...";
+          var payload = { action: '簽退', name: name, email: localStorage.getItem('gym_email'), role: '共同使用者' };
+          
+          fetch(GAS_URL, { method: "POST", body: JSON.stringify(payload) })
+          .then(() => {
+            bubble.innerText = "簽退成功";
+            localStorage.setItem('gym_status', 'checked_out');
+            setTimeout(updateBubbleUI, 1500);
           });
         }
-        document.getElementById('step-main').classList.add('hidden');
-        document.getElementById('step-device').classList.remove('hidden');
-      });
-    } else {
-      // 依舊是共同使用者，直接送出簽退
-      var bubble = document.getElementById('btn-bubble');
-      bubble.innerText = "處理中...";
-      var payload = { action: '簽退', name: name, email: localStorage.getItem('gym_email'), role: '共同使用者' };
-      fetch(GAS_URL, { method: "POST", body: JSON.stringify(payload) }).then(() => {
-        bubble.innerText = "簽退成功";
-        localStorage.setItem('gym_status', 'checked_out');
-        setTimeout(updateBubbleUI, 1500);
+      })
+      .catch(err => {
+        alert("網路連線逾時，請重試");
+        bubble.innerText = "簽退";
+        hideLoading();
       });
     }
-  })
-  .catch(err => {
-    alert("身分驗證失敗，請重新再試");
-    hideLoading();
-  });
-}
 
     function submitSignOut(mode) {
       var name = localStorage.getItem('gym_username');
@@ -250,7 +260,7 @@
       if (mode === '轉移') {
         var nextUser = document.getElementById('select-next-user').value;
         if (!nextUser) { alert('請選擇一位現場人員進行轉移！若現場無人，請走下方親自確認設備流程。'); return; }
-        payload.transferTo = nextUser; // 告知後端要轉移給誰
+        payload.transferTo = nextUser; 
       } else {
         var isAcChecked = document.getElementById('chk-ac').checked;
         var isLightChecked = document.getElementById('chk-light').checked;
