@@ -15,7 +15,7 @@
       <span id="toggle-icon" class="material-icons text-lg">timeline</span> 
       <span id="toggle-text">時間軸</span>
     </button>
-    <span class="text-xs text-gray-400 font-medium">Gym Mate v2.1</span>
+    <span class="text-xs text-gray-400 font-medium">Gym Mate v2.2</span>
   </div>
 
   <div id="page-main" class="w-full max-w-sm bg-white p-6 rounded-3xl shadow-xl relative mt-4">
@@ -114,28 +114,33 @@
     let myChart = null;
     let currentView = 'main';
 
+    // 💡 終極排版優化：將時間標籤外推至長條兩側，小於一小時絕不重疊
     const customLabelsPlugin = {
       id: 'customLabels',
       afterDatasetsDraw(chart) {
         const { ctx, data } = chart;
         ctx.save();
-        ctx.font = 'bold 10px sans-serif';
+        ctx.font = 'bold 11px sans-serif'; 
         ctx.fillStyle = '#9CA3AF'; 
-        ctx.textBaseline = 'bottom';
+        ctx.textBaseline = 'middle'; // 與長條圖垂直置中對齊
 
         chart.getDatasetMeta(0).data.forEach((bar, index) => {
           const record = data.datasets[0].data[index];
-          ctx.textAlign = 'left';
-          ctx.fillText(record.startLabel, bar.base + 4, bar.y - (bar.height / 2) - 2);
+          
+          // 🟩 簽到時間：推到長條左側外面 (base - 6)，文字靠右對齊
           ctx.textAlign = 'right';
-          ctx.fillText(record.endLabel, bar.x - 4, bar.y - (bar.height / 2) - 2);
+          ctx.fillText(record.startLabel, bar.base - 6, bar.y);
+          
+          // 🟥 簽退時間：推到長條右側外面 (x + 6)，文字靠左對齊
+          ctx.textAlign = 'left';
+          ctx.fillText(record.endLabel, bar.x + 6, bar.y);
         });
         ctx.restore();
       }
     };
     Chart.register(customLabelsPlugin);
 
-    // 💡 點擊切換身分即時美化監聽器
+    // 點擊切換身分即時美化監聽器
     document.addEventListener('change', function(e) {
       if (e.target && e.target.name === 'role') {
         var labelMain = document.getElementById('label-role-main');
@@ -407,7 +412,10 @@
           indexAxis: 'y',
           responsive: true,
           maintainAspectRatio: false,
-          layout: { padding: { top: 15, bottom: 10 } },
+          layout: { 
+            // 💡 左右側留白 45px，預留空間給推出去的時間標籤，避免邊緣文字被切掉
+            padding: { left: 45, right: 45, top: 15, bottom: 10 } 
+          },
           scales: {
             x: {
               min: 360, max: 1440,
