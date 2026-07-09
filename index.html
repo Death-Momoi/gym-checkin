@@ -15,7 +15,7 @@
       <span id="toggle-icon" class="material-icons text-lg">timeline</span> 
       <span id="toggle-text">時間軸</span>
     </button>
-    <span class="text-xs text-gray-400 font-medium">Gym Mate v2.0</span>
+    <span class="text-xs text-gray-400 font-medium">Gym Mate v2.1</span>
   </div>
 
   <div id="page-main" class="w-full max-w-sm bg-white p-6 rounded-3xl shadow-xl relative mt-4">
@@ -43,11 +43,11 @@
       </button>
 
       <div id="role-selector" class="mt-8 bg-gray-50 p-2 rounded-xl flex gap-2 w-full justify-center">
-        <label class="flex-1 text-center py-2 rounded-lg cursor-pointer transition-colors" id="label-role-main">
-          <input type="radio" name="role" value="主要借用者" class="hidden"> 主要借用者
+        <label class="flex-1 text-center py-2 rounded-lg cursor-pointer transition-colors text-sm" id="label-role-main">
+          <input type="radio" name="role" value="主要借用者" id="radio-main" class="mr-1"> 主要借用者
         </label>
-        <label class="flex-1 text-center py-2 rounded-lg cursor-pointer transition-colors bg-white shadow-sm border" id="label-role-sub">
-          <input type="radio" name="role" value="共同使用者" class="hidden" checked> 共同使用者
+        <label class="flex-1 text-center py-2 rounded-lg cursor-pointer transition-colors text-sm bg-white shadow-sm border text-blue-600 font-bold" id="label-role-sub">
+          <input type="radio" name="role" value="共同使用者" id="radio-sub" class="mr-1" checked> 共同使用者
         </label>
       </div>
     </div>
@@ -92,21 +92,19 @@
     <div id="msg" class="mt-4 text-center font-bold text-sm text-gray-500"></div>
   </div>
 
-
   <div id="page-timeline" class="hidden w-full max-w-sm bg-white p-4 rounded-3xl shadow-xl mt-4">
     <div class="flex justify-between items-center mb-4 gap-2">
-      <h2 class="text-md font-bold text-gray-700 flex items-center gap-1">📊 今日健身房動態看板</h2>
+      <h2 class="text-sm font-bold text-gray-700 flex items-center gap-1">📊 今日健身房動態看板</h2>
       <input type="date" id="report-date" class="bg-gray-100 text-gray-700 p-1 rounded-xl border text-xs focus:outline-none focus:border-blue-500">
     </div>
 
     <div class="relative bg-gray-900 p-2 rounded-2xl border border-gray-800 h-[450px]">
       <canvas id="timeChart"></canvas>
-      <div id="no-data" class="hidden absolute inset-0 flex items-center justify-center text-gray-500 text-sm font-bold">
+      <div id="no-data" class="hidden absolute inset-0 flex items-center justify-center text-gray-500 text-sm font-bold bg-gray-900/90 rounded-2xl">
         📭 該日期沒有任何進出紀錄
       </div>
     </div>
   </div>
-
 
   <script>
     // =================【請貼上你的 GAS Web App URL】=================
@@ -114,9 +112,8 @@
     // ===========================================================================
 
     let myChart = null;
-    let currentView = 'main'; // 'main' 或 'timeline'
+    let currentView = 'main';
 
-    // 客製化 Chart.js 外掛：在橫向長條圖的左上與右上繪製時間標籤
     const customLabelsPlugin = {
       id: 'customLabels',
       afterDatasetsDraw(chart) {
@@ -138,12 +135,25 @@
     };
     Chart.register(customLabelsPlugin);
 
-    // 頁面初始化
+    // 💡 點擊切換身分即時美化監聽器
+    document.addEventListener('change', function(e) {
+      if (e.target && e.target.name === 'role') {
+        var labelMain = document.getElementById('label-role-main');
+        var labelSub = document.getElementById('label-role-sub');
+        if (e.target.value === '主要借用者') {
+          labelMain.className = "flex-1 text-center py-2 rounded-lg cursor-pointer bg-white shadow-sm border text-blue-600 font-bold text-sm";
+          labelSub.className = "flex-1 text-center py-2 rounded-lg cursor-pointer text-gray-400 text-sm";
+        } else {
+          labelSub.className = "flex-1 text-center py-2 rounded-lg cursor-pointer bg-white shadow-sm border text-blue-600 font-bold text-sm";
+          labelMain.className = "flex-1 text-center py-2 rounded-lg cursor-pointer text-gray-400 text-sm";
+        }
+      }
+    });
+
     window.onload = function() {
       var savedEmail = localStorage.getItem('gym_email');
       var savedName = localStorage.getItem('gym_username');
       
-      // 設定日期選單預設為今天
       const today = new Date();
       const todayStr = today.getFullYear() + "-" + ("0" + (today.getMonth() + 1)).slice(-2) + "-" + ("0" + today.getDate()).slice(-2);
       document.getElementById('report-date').value = todayStr;
@@ -157,7 +167,6 @@
       }
     };
 
-    // 點擊導覽列切換分頁
     function toggleView() {
       const pageMain = document.getElementById('page-main');
       const pageTimeline = document.getElementById('page-timeline');
@@ -170,7 +179,6 @@
         pageTimeline.classList.remove('hidden');
         toggleIcon.innerText = 'home';
         toggleText.innerText = '回首頁';
-        // 切換到時間軸分頁時，自動讀取目前日期的圖表
         fetchAndRenderChart(document.getElementById('report-date').value);
       } else {
         currentView = 'main';
@@ -181,7 +189,6 @@
       }
     }
 
-    // 初次綁定帳號
     function bindAccount() {
       var email = document.getElementById('input-email').value.trim();
       var name = document.getElementById('input-name').value.trim();
@@ -202,27 +209,10 @@
       updateBubbleUI();
     }
 
-    // 控制大泡泡與身分選擇器的 UI
     function updateBubbleUI() {
       var status = localStorage.getItem('gym_status') || 'checked_out';
       var bubble = document.getElementById('btn-bubble');
       var roleSelector = document.getElementById('role-selector');
-      var labelMain = document.getElementById('label-role-main');
-      var labelSub = document.getElementById('label-role-sub');
-
-      // 身分選擇器單選鈕美化監聽
-      const radios = document.querySelectorAll('input[name="role"]');
-      radios.forEach(radio => {
-        if(radio.checked) {
-          if(radio.value === '主要借用者') {
-            labelMain.className = "flex-1 text-center py-2 rounded-lg cursor-pointer bg-white shadow-sm border text-blue-600 font-bold text-sm";
-            labelSub.className = "flex-1 text-center py-2 rounded-lg cursor-pointer text-gray-400 text-sm";
-          } else {
-            labelSub.className = "flex-1 text-center py-2 rounded-lg cursor-pointer bg-white shadow-sm border text-blue-600 font-bold text-sm";
-            labelMain.className = "flex-1 text-center py-2 rounded-lg cursor-pointer text-gray-400 text-sm";
-          }
-        }
-      });
 
       if (status === 'checked_out') {
         bubble.innerText = "簽到";
@@ -237,7 +227,6 @@
       }
     }
 
-    // 點擊大泡泡行為
     function handleBubbleClick() {
       var status = localStorage.getItem('gym_status') || 'checked_out';
       if (status === 'checked_out') {
@@ -247,7 +236,6 @@
       }
     }
 
-    // 執行簽到
     function processCheckIn() {
       var name = localStorage.getItem('gym_username');
       var email = localStorage.getItem('gym_email');
@@ -268,7 +256,6 @@
       .catch(err => { alert("連線失敗"); updateBubbleUI(); });
     }
 
-    // 簽退前哨站：同步最新權限與責任轉移狀態
     function processPreCheckOut() {
       var name = localStorage.getItem('gym_username');
       var bubble = document.getElementById('btn-bubble');
@@ -324,7 +311,6 @@
       });
     }
 
-    // 提交主要負責人簽退（責任轉移或親自關閉）
     function submitSignOut(mode) {
       var name = localStorage.getItem('gym_username');
       var payload = { action: '簽退', name: name, email: localStorage.getItem('gym_email'), role: '主要借用者' };
@@ -364,37 +350,11 @@
       });
     }
 
-    // ⚡【免跳轉核心】直接用 Fetch 繞過 Google 開放權限 Bug，向後端抓取特定日期的時間軸資料
     function fetchAndRenderChart(dateStr) {
       const noDataHint = document.getElementById('no-data');
       if (myChart) { myChart.destroy(); }
       noDataHint.classList.add('hidden');
 
-      // 使用 JSONP 概念或前端藉由呼叫 GAS 回傳 getReportData，
-      // 這裡改用通用 Fetch，後端不論 doGet/doPost，只要提供 getReportData，
-      // 但由於 GAS 執行 getReportData 最穩定的方式是傳遞動作給 doPost，故我們在背景用 action 來跟後端要資料！
-      
-      // 為了與我們現有強大的 getReportData(targetDateStr) 對接，我們直接改為發送 POST 來取得報表 JSON
-      // 為了相容，我們讓後端能直接在 doPost 接收報表請求，這樣前端就 100% 不會觸發瀏覽權限錯誤！
-      
-      // 不過為了避免再度動到 Code.gs，我們可以直接利用 web app url 本身加上參數來調用。
-      // 最完美的作法是，前端在同一個頁面中利用 fetch 向 GAS 發送帶有特殊 action 的 POST 請求！
-      
-      // 為了讓這支 index.html 完全不依賴 doGet 的網頁跳轉，我們在背景新增報表抓取 Fetch：
-    }
-
-    // 修正：為了讓圖表撈取百分之百免除權限干擾，我們讓前端直接用 POST 方式向後端傳遞「取得報表資料」
-    // 這樣使用者就完全不需要去打開 Google 看板網域。
-    function fetchAndRenderChart(dateStr) {
-      const noDataHint = document.getElementById('no-data');
-      if (myChart) { myChart.destroy(); }
-      noDataHint.classList.add('hidden');
-
-      // 建立報表請求載荷，改用向現成、免檢權限的 doPost 索取報表資料！
-      // 為了讓後端支援，我們稍後可在 Code.gs 最上方加入一行判定。但其實目前 Code.gs 是 getReportData(targetDateStr) 供 doGet 調用。
-      // 如果我們要完全防範 Google 多帳號權限阻擋，最穩定的方式就是讓前端發送 POST { action: "取得報表圖表", date: dateStr }。
-      
-      // 這裡直接模擬發送：
       fetch(GAS_URL, {
         method: "POST",
         body: JSON.stringify({ action: "取得報表圖表", date: dateStr })
